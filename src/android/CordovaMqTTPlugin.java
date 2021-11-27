@@ -16,7 +16,7 @@ import org.json.JSONObject;
  */
 public class CordovaMqTTPlugin extends CordovaPlugin {
     CallbackContext syncCB,asyncCB;
-    
+
     boolean connected;
     @Override
     public boolean execute(String action, final JSONArray args, CallbackContext callbackContext) throws JSONException {
