@@ -9,11 +9,10 @@ This project is not abandoned or inactive. On 20th Feb 2019, major updates will 
 
 Updates:
 
-1. Native Support for iOS & Windows (UWP only)
-2. New API
+1. On receiving the payload, there will be a base64 version of binary data along with string payload and many other options in listen methods.
+2. Resolution of bugs
 3. SSL/TLS support on Android, iOS & Windows
 4. Better config validation.
-5. Resolution of bugs
 
 
 cordova-plugin-mqtt is plugin for building MQTT client for multiple platforms in Apache Cordova. Currently Android platform is present and next support is planned for iOS & Windows Phone.

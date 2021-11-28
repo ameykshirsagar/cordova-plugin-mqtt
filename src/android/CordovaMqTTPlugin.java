@@ -110,7 +110,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
     }
 
     private void connect(String url,String cid,int ka,boolean cleanSess,int connTimeOut,String uname, String pass,String willTopic,String willPayload,int willQos,boolean willRetain,String version,boolean isBinaryPayload,boolean isBinaryWillPayload) {
-        Core.connect(url,
+        Core.mqttConnect(url,
                 cid,
                 ka,
                 cleanSess,
@@ -123,10 +123,6 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                 willRetain,
                 version,
                 isBinaryWillPayload, new GoCallback() {
-                    @Override
-                    public void mqttError(Exception e) {
-
-                    }
 
                     @Override
                     public void onConnect() {
@@ -136,7 +132,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                             dis.put("type", "connected");
                             dis.put("call", "connected");
                             dis.put("response", "connected");
-                            dis.put("connectionStatus", connected);
+                            dis.put("connection_status", Core.mqttIsConnected());
                             sendUpdate(dis);
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -152,7 +148,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                             dis.put("call", "failure");
                             dis.put("response", "fail to connect");
                             dis.put("message", e.toString());
-                            dis.put("connectionStatus", connected);
+                            dis.put("connection_status", Core.mqttIsConnected());
                             sendUpdate(dis);
                         } catch (JSONException err) {
                             err.printStackTrace();
@@ -167,7 +163,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                             dis.put("type", "connectionLost");
                             dis.put("message", cause.toString());
                             dis.put("call", "disconnected");
-                            dis.put("connectionStatus", false);
+                            dis.put("connection_status", Core.mqttIsConnected());
                             sendUpdate(dis);
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -185,21 +181,22 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                     }
 
                     @Override
-                    public void onMessageRecevied(String topic, byte[] payload) {
+                    public void onMessageRecevied(String topic, byte[] payload, long qos, boolean isDuplicate ,boolean retained) {
                         JSONObject dis = new JSONObject();
+                        String pl = new String(payload);
                         try {
                             dis.put("type", "messageArrived");
                             dis.put("topic", topic);
-//                            if (isBinaryPayload) {
-//                                dis.put("payload", Base64.encodeToString(message.getPayload(), Base64.DEFAULT));
-//                            } else {
-//                                dis.put("payload", message.toString());
-//                            }
-//                            dis.put("call", "onPublish");
-//                            dis.put("connectionStatus", client.isConnected());
-//                            dis.put("qos",message.getQos());
-//                            dis.put("isRetained",message.isRetained());
-//                            dis.put("isDuplicate",message.isDuplicate());
+                            dis.put("payload_base64", Base64.encodeToString(payload, Base64.DEFAULT));
+                            dis.put("payload", pl);
+                            dis.put("payload_bytes", payload);
+                            dis.put("payload_size", payload.length);
+                            dis.put("call", "onPublish");
+                            dis.put("connection_status", Core.mqttIsConnected());
+                            dis.put("qos",qos);
+                            dis.put("is_retained",retained);
+                            dis.put("is_duplicate",isDuplicate);
+                            //Log.i("msg", dis.toString());
                             sendUpdate(dis);
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -207,9 +204,11 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                     }
 
                     @Override
-                    public void onPublish() {
+                    public void onPublish(String s, long b) {
 
                     }
+
+
 
                     @Override
                     public void onPublishError(Exception e) {
@@ -222,9 +221,10 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                     }
 
                     @Override
-                    public void onSubscribe() {
+                    public void onSubscribe(String s) {
 
                     }
+
 
                     @Override
                     public void onSubscribeError(Exception e) {
@@ -232,9 +232,10 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                     }
 
                     @Override
-                    public void onUnsubscribe() {
+                    public void onUnsubscribe(String s) {
 
                     }
+
 
                     @Override
                     public void onUnsubscribeError(Exception e) {
@@ -243,7 +244,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                 });
     }
     private void publish(JSONArray args) throws JSONException {
-        Core.publish(args.getString(0), args.getString(1), new PublishCallback() {
+        Core.mqttPublish(args.getString(0), args.getString(1), args.getInt(2),args.getBoolean(3),new PublishCallback() {
             @Override
             public void onFailure(Exception e) {
                 JSONObject dis = new JSONObject();
@@ -253,7 +254,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                     dis.put("response", "not published");
 //                    dis.put("isPayloadDuplicate", payload.isDuplicate());
 //                    dis.put("qos", payload.getQos());
-//                    dis.put("connectionStatus", client.isConnected());
+                    dis.put("connection_status", Core.mqttIsConnected());
                     sendOnceUpdate(dis);
                 } catch (JSONException err) {
                     err.printStackTrace();
@@ -261,7 +262,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
             }
 
             @Override
-            public void onSuccess() {
+            public void onSuccess(String s, long b) {
                 JSONObject dis = new JSONObject();
                 try {
                     dis.put("type", "publish");
@@ -269,17 +270,19 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                     dis.put("response", "published");
 //                    dis.put("isPayloadDuplicate", payload.isDuplicate());
 //                    dis.put("qos", payload.getQos());
-//                    dis.put("connectionStatus", client.isConnected());
+//                    dis.put("connection_status", client.isConnected());
                     sendOnceUpdate(dis);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }
+
+
         });
 
     }
     private void subscribe(final JSONArray args) throws JSONException {
-        Core.subscribe(args.getString(0), new SubscribeCallback() {
+        Core.mqttSubscribe(args.getString(0), (byte) args.getInt(1), new SubscribeCallback() {
             @Override
             public void onFailure(Exception e) {
                 JSONObject dis = new JSONObject();
@@ -287,8 +290,8 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                     dis.put("type", "subscribe");
                     dis.put("call", "failure");
                     dis.put("response", "cannot subscribe to " + args.getString(0));
-                    dis.put("message", e.getMessage());
-                    //dis.put("connectionStatus", client.isConnected());
+                    dis.put("message", e);
+                    dis.put("connection_status", Core.isConnected());
                     sendOnceUpdate(dis);
                 } catch (JSONException err) {
                     err.printStackTrace();
@@ -296,18 +299,20 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
             }
 
             @Override
-            public void onSuccess() {
+            public void onSuccess(String topic) {
                 JSONObject dis = new JSONObject();
                 try {
                     dis.put("type", "subscribe");
                     dis.put("call", "success");
-                    dis.put("response", "subscribed to " + args.getString(0));
-                    //dis.put("connectionStatus", client.isConnected());
+                    dis.put("response", "subscribed to " + topic);
+                    dis.put("connection_status", Core.isConnected());
                     sendOnceUpdate(dis);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }
+
+
         });
     }
     private void disconnect(){
@@ -318,7 +323,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                 try {
                     res.put("type","disconnect");
                     res.put("call","failure");
-                    //res.put("connectionStatus",client.isConnected());
+                    res.put("connection_status",Core.isConnected());
                     res.put("message",e.toString());
                     sendOnceUpdate(res);
                 } catch (JSONException err) {
@@ -332,7 +337,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                 try {
                     res.put("type","disconnect");
                     res.put("call","success");
-                    //res.put("connectionStatus",client.isConnected());
+                    res.put("connection_status",Core.isConnected());
                     sendOnceUpdate(res);
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -348,7 +353,7 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
                 try {
                     res.put("type","unsubscribe");
                     res.put("call","failure");
-                    //res.put("connectionStatus",client.isConnected());
+                    res.put("connection_status",Core.isConnected());
                     res.put("unsubscribedTopic",args.getString(0));
                     res.put("message",e.toString());
                     sendOnceUpdate(res);
@@ -358,13 +363,13 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
             }
 
             @Override
-            public void onSuccess() {
+            public void onSuccess(String topic) {
                 JSONObject res = new JSONObject();
                 try {
                     res.put("type","unsubscribe");
                     res.put("call","success");
-                    //res.put("connectionStatus",client.isConnected());
-                    res.put("unsubscribedTopic",args.getString(0));
+                    res.put("connection_status",Core.isConnected());
+                    res.put("unsubscribedTopic",topic);
                     sendOnceUpdate(res);
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -377,7 +382,6 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
             PluginResult result = new PluginResult(PluginResult.Status.OK,message);
             result.setKeepCallback(false);
             syncCB.sendPluginResult(result);
-
             Log.i("mqttalabs","\nfor subscribe the callback id is "+syncCB.getCallbackId());
         }
     }
@@ -386,7 +390,6 @@ public class CordovaMqTTPlugin extends CordovaPlugin {
             PluginResult result = new PluginResult(PluginResult.Status.OK,message);
             result.setKeepCallback(true);
             asyncCB.sendPluginResult(result);
-
             Log.i("mqttalabs","\nfor subscribe the callback id is "+asyncCB.getCallbackId());
         }
     }
