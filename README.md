@@ -102,11 +102,11 @@ cordova.plugins.CordovaMqTTPlugin.connect({
     onConnectionLost:function (){
         console.log("disconnect");
     },
-    routerConfig:{
-        router:routerObject //instantiated router object
-        publishMethod:"emit", //refer your custom router documentation to get the emitter/publishing function name. The parameter should be a string and not a function.
-        useDefaultRouter:false //Set false to use your own topic router implementation. Set true to use the stock topic router implemented in the plugin.
-    }
+    // routerConfig:{
+    //     router:routerObject //instantiated router object
+    //     publishMethod:"emit", //refer your custom router documentation to get the emitter/publishing function name. The parameter should be a string and not a function.
+    //     useDefaultRouter:false //Set false to use your own topic router implementation. Set true to use the stock topic router implemented in the plugin.
+    // }
 })
 ```
 
@@ -115,7 +115,7 @@ To publish to a channel. You can use this function.
 
 ```javascript
 cordova.plugins.CordovaMqTTPlugin.publish({
-   topic:"sampletopic",
+   topic:"/sampletopic",
    payload:"hello from the plugin",
    qos:0,
    retain:false,
@@ -135,7 +135,7 @@ To subscribe to a channel. You can use this function. You can also use wildcard 
 ```javascript
 //Simple subscribe
 cordova.plugins.CordovaMqTTPlugin.subscribe({
-   topic:"sampletopic",
+   topic:"/sampletopic",
    qos:0,
   success:function(s){
 
@@ -190,11 +190,15 @@ We are introducing topic pattern support to listen to certain topics in a way th
 
 ```javascript
  //Deprecated
- document.addEventListener("sampletopic",function(e){
+ document.addEventListener("/sampletopic",function(e){
   console.log(e.payload)
  },false);
 
  //New way to listen to topics
+  cordova.plugins.CordovaMqTTPlugin.listen("/sampletopic", function(payload, params) {
+      console.log("payload", payload);
+  });
+  
  cordova.plugins.CordovaMqTTPlugin.listen("/topic/+singlewc/#multiwc",function(payload,params){
   //Callback:- (If the user has published to /topic/room/hall)
   //payload : contains payload data
@@ -208,7 +212,7 @@ To unsubscribe to a channel. You can use this function.
 
 ```javascript
 cordova.plugins.CordovaMqTTPlugin.unsubscribe({
-   topic:"sampletopic",
+   topic:"/sampletopic",
   success:function(s){
 
   },
